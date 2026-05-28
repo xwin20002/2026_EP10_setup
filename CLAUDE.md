@@ -16,7 +16,9 @@
 
 ## 工具清單
 （之後加新工具時會自動更新）
-- （尚無）
+- **coordinate-hunter** — 直角座標獵人,11×11 整數格點,60 秒 / 10 分。
+  - 本機：`tools/coordinate-hunter/index.html`
+  - 上線：https://xwin20002.github.io/2026_EP10_setup/tools/coordinate-hunter/
 
 ## 工作注意事項
 - 學生資料一律去識別化（只用座號 + 班級代號）
