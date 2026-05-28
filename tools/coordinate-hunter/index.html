@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>座標獵人</title>
+<style>
+  :root {
+    --bg: #111;
+    --ink: #f5f5dc;
+    --accent: #ff8c1a;
+    --grid: #3a3a3a;
+    --hit: #ff8c1a;
+    --miss: #555;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Chalkduster", "Comic Sans MS", "微軟正黑體", system-ui, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px;
+  }
+  h1 {
+    font-size: 1.6rem;
+    margin: 6px 0 4px;
+    letter-spacing: 2px;
+  }
+  h1 .accent { color: var(--accent); }
+  .hud {
+    display: flex;
+    gap: 18px;
+    font-size: 1.05rem;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .hud span b { color: var(--accent); font-weight: 700; }
+  .board-wrap {
+    position: relative;
+    width: min(92vw, 560px);
+    aspect-ratio: 1 / 1;
+    background: #0c0c0c;
+    border: 2px dashed #555;
+    border-radius: 6px;
+    padding: 28px 28px 28px 36px;
+  }
+  svg { width: 100%; height: 100%; display: block; }
+  .axis { stroke: var(--ink); stroke-width: 1.2; }
+  .grid-line { stroke: var(--grid); stroke-width: 0.6; }
+  .tick { fill: var(--ink); font-size: 4px; font-family: inherit; }
+  .dot-hit {
+    fill: var(--hit);
+    filter: drop-shadow(0 0 3px var(--accent));
+  }
+  .dot-miss {
+    fill: var(--miss);
+    opacity: 0.85;
+  }
+  .controls {
+    margin-top: 14px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+    width: min(92vw, 560px);
+  }
+  input[type="text"] {
+    flex: 1 1 180px;
+    min-width: 160px;
+    padding: 10px 12px;
+    border: 2px solid var(--ink);
+    border-radius: 4px;
+    background: #0c0c0c;
+    color: var(--ink);
+    font-family: inherit;
+    font-size: 1rem;
+    letter-spacing: 1px;
+  }
+  input[type="text"]:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+  button {
+    padding: 10px 18px;
+    border: 2px solid var(--accent);
+    background: transparent;
+    color: var(--accent);
+    font-family: inherit;
+    font-size: 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    letter-spacing: 2px;
+  }
+  button:hover { background: var(--accent); color: #111; }
+  button.secondary { border-color: var(--ink); color: var(--ink); }
+  button.secondary:hover { background: var(--ink); color: #111; }
+  .feedback {
+    margin-top: 10px;
+    min-height: 1.4em;
+    font-size: 1.05rem;
+    text-align: center;
+  }
+  .feedback.hit { color: var(--accent); }
+  .feedback.miss { color: #aaa; }
+  .feedback.bad { color: #ff4d4d; }
+  .modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .modal.show { display: flex; }
+  .modal-card {
+    background: #161616;
+    border: 2px solid var(--accent);
+    border-radius: 8px;
+    padding: 28px 32px;
+    text-align: center;
+    max-width: 420px;
+    width: 100%;
+  }
+  .modal h2 {
+    margin: 0 0 12px;
+    color: var(--accent);
+    letter-spacing: 3px;
+  }
+  .modal .score {
+    font-size: 2.2rem;
+    color: var(--accent);
+    margin: 12px 0;
+  }
+  footer {
+    margin-top: 18px;
+    font-size: 0.8rem;
+    color: #777;
+  }
+</style>
+</head>
+<body>
+  <h1>座標<span class="accent">獵人</span></h1>
+  <div class="hud">
+    <span>剩餘時間：<b id="timer">60</b> s</span>
+    <span>得分：<b id="score">0</b> / 10</span>
+    <span>射擊次數：<b id="shots">0</b></span>
+  </div>
+
+  <div class="board-wrap">
+    <svg id="board" viewBox="-6 -6 12 12" preserveAspectRatio="xMidYMid meet"></svg>
+  </div>
+
+  <form class="controls" id="form" autocomplete="off">
+    <input id="guess" type="text" placeholder="輸入座標,例如 2,-3" inputmode="text" />
+    <button type="submit">射擊</button>
+    <button type="button" class="secondary" id="restart">重新開始</button>
+  </form>
+
+  <div class="feedback" id="feedback">在棋盤上找出 10 個隱藏座標,範圍 x,y ∈ [-5, 5]</div>
+
+  <div class="modal" id="modal" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <h2 id="endTitle">時間到!</h2>
+      <div class="score"><span id="finalScore">0</span> / 10</div>
+      <div id="endMsg" style="margin-bottom:12px;color:#bbb;"></div>
+      <button id="modalRestart">再玩一次</button>
+    </div>
+  </div>
+
+  <footer>純前端 · 11×11 格點 · 60 秒倒數</footer>
+
+<script>
+(() => {
+  const GRID_MIN = -5, GRID_MAX = 5, TARGETS = 10, TIME = 60;
+  const svg = document.getElementById('board');
+  const timerEl = document.getElementById('timer');
+  const scoreEl = document.getElementById('score');
+  const shotsEl = document.getElementById('shots');
+  const feedbackEl = document.getElementById('feedback');
+  const guessEl = document.getElementById('guess');
+  const formEl = document.getElementById('form');
+  const modalEl = document.getElementById('modal');
+  const finalScoreEl = document.getElementById('finalScore');
+  const endTitleEl = document.getElementById('endTitle');
+  const endMsgEl = document.getElementById('endMsg');
+
+  let targets = new Set();
+  let hits = new Set();
+  let shotsMade = new Set();
+  let timeLeft = TIME;
+  let tickHandle = null;
+  let over = false;
+
+  function drawAxes() {
+    const NS = 'http://www.w3.org/2000/svg';
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+    for (let i = GRID_MIN; i <= GRID_MAX; i++) {
+      const vx = document.createElementNS(NS, 'line');
+      vx.setAttribute('x1', i); vx.setAttribute('y1', GRID_MIN);
+      vx.setAttribute('x2', i); vx.setAttribute('y2', GRID_MAX);
+      vx.setAttribute('class', 'grid-line');
+      svg.appendChild(vx);
+
+      const hy = document.createElementNS(NS, 'line');
+      hy.setAttribute('x1', GRID_MIN); hy.setAttribute('y1', i);
+      hy.setAttribute('x2', GRID_MAX); hy.setAttribute('y2', i);
+      hy.setAttribute('class', 'grid-line');
+      svg.appendChild(hy);
+    }
+
+    const xAxis = document.createElementNS(NS, 'line');
+    xAxis.setAttribute('x1', GRID_MIN); xAxis.setAttribute('y1', 0);
+    xAxis.setAttribute('x2', GRID_MAX); xAxis.setAttribute('y2', 0);
+    xAxis.setAttribute('class', 'axis');
+    svg.appendChild(xAxis);
+
+    const yAxis = document.createElementNS(NS, 'line');
+    yAxis.setAttribute('x1', 0); yAxis.setAttribute('y1', GRID_MIN);
+    yAxis.setAttribute('x2', 0); yAxis.setAttribute('y2', GRID_MAX);
+    yAxis.setAttribute('class', 'axis');
+    svg.appendChild(yAxis);
+
+    for (let i = GRID_MIN; i <= GRID_MAX; i++) {
+      if (i === 0) continue;
+      const tx = document.createElementNS(NS, 'text');
+      tx.setAttribute('x', i); tx.setAttribute('y', 0.7);
+      tx.setAttribute('class', 'tick');
+      tx.setAttribute('text-anchor', 'middle');
+      tx.textContent = i;
+      svg.appendChild(tx);
+
+      const ty = document.createElementNS(NS, 'text');
+      ty.setAttribute('x', -0.5); ty.setAttribute('y', -i + 0.2);
+      ty.setAttribute('class', 'tick');
+      ty.setAttribute('text-anchor', 'end');
+      ty.textContent = i;
+      svg.appendChild(ty);
+    }
+  }
+
+  function plotDot(x, y, klass) {
+    const NS = 'http://www.w3.org/2000/svg';
+    const c = document.createElementNS(NS, 'circle');
+    c.setAttribute('cx', x);
+    c.setAttribute('cy', -y);
+    c.setAttribute('r', 0.3);
+    c.setAttribute('class', klass);
+    svg.appendChild(c);
+  }
+
+  function genTargets() {
+    targets = new Set();
+    while (targets.size < TARGETS) {
+      const x = Math.floor(Math.random() * 11) - 5;
+      const y = Math.floor(Math.random() * 11) - 5;
+      targets.add(`${x},${y}`);
+    }
+  }
+
+  function reset() {
+    hits = new Set();
+    shotsMade = new Set();
+    timeLeft = TIME;
+    over = false;
+    genTargets();
+    drawAxes();
+    updateHUD();
+    feedbackEl.textContent = `在棋盤上找出 ${TARGETS} 個隱藏座標,範圍 x,y ∈ [-5, 5]`;
+    feedbackEl.className = 'feedback';
+    modalEl.classList.remove('show');
+    guessEl.value = '';
+    guessEl.focus();
+    if (tickHandle) clearInterval(tickHandle);
+    tickHandle = setInterval(tick, 1000);
+  }
+
+  function tick() {
+    if (over) return;
+    timeLeft--;
+    if (timeLeft <= 0) {
+      timeLeft = 0;
+      updateHUD();
+      finish('時間到!');
+      return;
+    }
+    updateHUD();
+  }
+
+  function updateHUD() {
+    timerEl.textContent = timeLeft;
+    scoreEl.textContent = hits.size;
+    shotsEl.textContent = shotsMade.size;
+  }
+
+  function finish(title) {
+    over = true;
+    clearInterval(tickHandle);
+    finalScoreEl.textContent = hits.size;
+    endTitleEl.textContent = title;
+    const acc = shotsMade.size ? Math.round(hits.size / shotsMade.size * 100) : 0;
+    endMsgEl.textContent = `射擊 ${shotsMade.size} 次,命中率 ${acc}%`;
+    modalEl.classList.add('show');
+  }
+
+  function parseGuess(raw) {
+    const s = raw.trim().replace(/[(\s)]/g, '').replace(/,/g, ',');
+    const m = s.match(/^(-?\d+),(-?\d+)$/);
+    if (!m) return null;
+    const x = parseInt(m[1], 10), y = parseInt(m[2], 10);
+    if (x < GRID_MIN || x > GRID_MAX || y < GRID_MIN || y > GRID_MAX) return null;
+    return [x, y];
+  }
+
+  formEl.addEventListener('submit', e => {
+    e.preventDefault();
+    if (over) return;
+    const parsed = parseGuess(guessEl.value);
+    if (!parsed) {
+      feedbackEl.textContent = '格式錯誤:請輸入 x,y(整數,範圍 -5 到 5)';
+      feedbackEl.className = 'feedback bad';
+      guessEl.value = '';
+      guessEl.focus();
+      return;
+    }
+    const [x, y] = parsed;
+    const key = `${x},${y}`;
+    if (shotsMade.has(key)) {
+      feedbackEl.textContent = `(${x}, ${y}) 已經打過了`;
+      feedbackEl.className = 'feedback miss';
+    } else {
+      shotsMade.add(key);
+      if (targets.has(key)) {
+        hits.add(key);
+        plotDot(x, y, 'dot-hit');
+        feedbackEl.textContent = `命中 (${x}, ${y})! 得分 +1`;
+        feedbackEl.className = 'feedback hit';
+        if (hits.size >= TARGETS) {
+          updateHUD();
+          finish('全部命中!');
+          guessEl.value = '';
+          return;
+        }
+      } else {
+        plotDot(x, y, 'dot-miss');
+        feedbackEl.textContent = `(${x}, ${y}) 沒中,繼續找`;
+        feedbackEl.className = 'feedback miss';
+      }
+    }
+    updateHUD();
+    guessEl.value = '';
+    guessEl.focus();
+  });
+
+  document.getElementById('restart').addEventListener('click', reset);
+  document.getElementById('modalRestart').addEventListener('click', reset);
+
+  reset();
+})();
+</script>
+</body>
+</html>
