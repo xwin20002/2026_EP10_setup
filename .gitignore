@@ -15,6 +15,9 @@ credentials.*
 node_modules/
 package-lock.json
 
+# AI 生圖輸出（draw skill 測試/暫存）
+generated/
+
 # OS
 .DS_Store
 Thumbs.db
