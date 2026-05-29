@@ -21,6 +21,15 @@
 - 📘 Obsidian 駕駛艙:`2ndbrain/2026_EP10_setup/工作筆記.md`(想法的家)
 - 🔥 Firebase 專案:(待建,資料的家)
 
+## 服務連接狀態(2026-05-29 verified)
+- ✅ **GitHub** — `gh` CLI 已登入(xwin20002),個人專案與 mdskill repo 都可 push
+- ✅ **Obsidian** — vault 在 `G:\我的雲端硬碟\2ndbrain`,Obsidian MCP server 可讀/寫筆記
+- ✅ **Firebase** — Firebase MCP server 已連接,可查 Firestore / Auth / Functions / Hosting
+- ✅ **NotebookLM** — `notebooklm-mcp` 已連接(account: `xwin20002@gmail.com`),可建 notebook / 跑 studio
+  - ⚠️ **Google session cookie 會週期性過期(約數週),斷時所有 `mcp__notebooklm-mcp__*` 工具回 `Authentication expired`**
+  - 重連 SOP:terminal 跑 `nlm login`(Git Bash 端) → MCP 端呼叫 `refresh_auth` → 重試
+  - 細節與已知踩坑(cmd 端 trampoline 問題)記在 memory `notebooklm-mcp-auth.md`
+
 ## 工具清單
 (之後加新工具時會自動更新)
 - **coordinate-hunter** — 直角座標獵人,11×11 整數格點,60 秒 / 10 分。
